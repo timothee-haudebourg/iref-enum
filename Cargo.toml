@@ -1,0 +1,24 @@
+[package]
+name = "iref-enum"
+version = "1.0.0"
+authors = ["Timothée Haudebourg <author@haudebourg.net>"]
+edition = "2018"
+categories = ["web-programming", "internationalization"]
+keywords = ["iri", "iref", "macro", "derive", "enum"]
+description = "Derive macro for IRI-like enum types"
+repository = "https://github.com/timothee-haudebourg/iref-enum"
+documentation = "https://docs.rs/iref-enum"
+license = "MIT/Apache-2.0"
+readme = "README.md"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+iref = "1.1"
+syn = "1.0"
+proc-macro2 = "1.0"
+quote = "1.0"
+
+[dev-dependencies]
+static-iref = "1.0"
