@@ -21,6 +21,7 @@
 //! `TryFrom<Iri>` and `Into<Iri>` for the enum type.
 //! The IRI of each variant is defined with the `iri` attribute:
 //! ```rust
+//! # #![feature(proc_macro_hygiene)]
 //! #[macro_use]
 //! extern crate iref_enum;
 //! use std::convert::TryInto;
@@ -44,6 +45,8 @@
 //! Then any `iri` attribute of the form `prefix:suffix` we be expanded into the concatenation of the prefix IRI and `suffix`.
 //!
 //! ```rust
+//! # #![feature(proc_macro_hygiene)]
+//! # use::iref_enum::IriEnum;
 //! #[derive(IriEnum)]
 //! #[iri_prefix("foaf" = "http://xmlns.com/foaf/0.1/")]
 //! pub enum Vocab {
@@ -210,9 +213,17 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 					}
 				}
 
-				impl<'a> Into<::iref::Iri<'a>> for &'a #type_id {
-					fn into(self) -> ::iref::Iri<'a> {
-						match self {
+				impl<'a> From<&'a #type_id> for ::iref::Iri<'static> {
+					fn from(vocab: &'a #type_id) -> ::iref::Iri<'static> {
+						match vocab {
+							#into
+						}
+					}
+				}
+
+				impl From<#type_id> for ::iref::Iri<'static> {
+					fn from(vocab: #type_id) -> ::iref::Iri<'static> {
+						match vocab {
 							#into
 						}
 					}
