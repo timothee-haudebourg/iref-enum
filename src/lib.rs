@@ -205,6 +205,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 				impl ::std::convert::TryFrom<::iref::Iri<'_>> for #type_id {
 					type Error = ();
 
+					#[inline]
 					fn try_from(iri: ::iref::Iri) -> ::std::result::Result<#type_id, ()> {
 						match iri {
 							#try_from
@@ -214,6 +215,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 				}
 
 				impl<'a> From<&'a #type_id> for ::iref::Iri<'static> {
+					#[inline]
 					fn from(vocab: &'a #type_id) -> ::iref::Iri<'static> {
 						match vocab {
 							#into
@@ -222,10 +224,25 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 				}
 
 				impl From<#type_id> for ::iref::Iri<'static> {
+					#[inline]
 					fn from(vocab: #type_id) -> ::iref::Iri<'static> {
 						match vocab {
 							#into
 						}
+					}
+				}
+
+				impl iref::AsIri for #type_id {
+					#[inline]
+					fn as_iri(&self) -> ::iref::Iri {
+						::iref::Iri::from(self)
+					}
+				}
+
+				impl iref::AsIriRef for #type_id {
+					#[inline]
+					fn as_iri_ref(&self) -> ::iref::IriRef {
+						::iref::Iri::from(self).into()
 					}
 				}
 			};
