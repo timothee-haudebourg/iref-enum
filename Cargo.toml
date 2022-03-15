@@ -15,7 +15,7 @@ readme = "README.md"
 proc-macro = true
 
 [dependencies]
-iref = "^1.4"
+iref = "^2.1"
 syn = "^1.0"
 proc-macro2 = "^1.0"
 quote = "^1.0"
