@@ -1,9 +1,9 @@
 //! # IRI Enums
 //!
 //! <table><tr>
-//! 	<td><a href="https://docs.rs/iref-enum">Documentation</a></td>
-//! 	<td><a href="https://crates.io/crates/iref-enum">Crate informations</a></td>
-//! 	<td><a href="https://github.com/timothee-haudebourg/iref-enum">Repository</a></td>
+//!   <td><a href="https://docs.rs/iref-enum">Documentation</a></td>
+//!   <td><a href="https://crates.io/crates/iref-enum">Crate informations</a></td>
+//!   <td><a href="https://github.com/timothee-haudebourg/iref-enum">Repository</a></td>
 //! </tr></table>
 //!
 //! This is a companion crate for `iref` providing a derive macro to declare
@@ -28,13 +28,13 @@
 //!
 //! #[derive(IriEnum, PartialEq, Debug)]
 //! pub enum Vocab {
-//! 	#[iri("http://xmlns.com/foaf/0.1/name")] Name,
-//! 	#[iri("http://xmlns.com/foaf/0.1/knows")] Knows
+//!   #[iri("http://xmlns.com/foaf/0.1/name")] Name,
+//!   #[iri("http://xmlns.com/foaf/0.1/knows")] Knows
 //! }
 //!
 //! pub fn main() {
-//! 	let term: Vocab = static_iref::iri!("http://xmlns.com/foaf/0.1/name").try_into().unwrap();
-//! 	assert_eq!(term, Vocab::Name)
+//!   let term: Vocab = static_iref::iri!("http://xmlns.com/foaf/0.1/name").try_into().unwrap();
+//!   assert_eq!(term, Vocab::Name)
 //! }
 //! ```
 //!
@@ -50,18 +50,15 @@
 //! #[derive(IriEnum)]
 //! #[iri_prefix("foaf" = "http://xmlns.com/foaf/0.1/")]
 //! pub enum Vocab {
-//! 	#[iri("foaf:name")] Name,
-//! 	#[iri("foaf:knows")] Knows
+//!   #[iri("foaf:name")] Name,
+//!   #[iri("foaf:knows")] Knows
 //! }
 //! ```
-extern crate proc_macro;
-
+use iref::IriBuf;
 use proc_macro::TokenStream;
 use proc_macro2::TokenTree;
 use quote::quote;
-use syn;
 use std::collections::HashMap;
-use iref::IriBuf;
 
 macro_rules! error {
 	( $( $x:expr ),* ) => {
@@ -73,13 +70,16 @@ macro_rules! error {
 	};
 }
 
-fn filter_attribute(attr: syn::Attribute, name: &str) -> Result<Option<proc_macro2::TokenStream>, TokenStream> {
+fn filter_attribute(
+	attr: syn::Attribute,
+	name: &str,
+) -> Result<Option<proc_macro2::TokenStream>, TokenStream> {
 	if let Some(attr_id) = attr.path.get_ident() {
 		if attr_id == name {
 			if let Some(TokenTree::Group(group)) = attr.tokens.into_iter().next() {
 				Ok(Some(group.stream()))
 			} else {
-				return Err(error!("malformed `{}` attribute", name))
+				return Err(error!("malformed `{}` attribute", name));
 			}
 		} else {
 			Ok(None)
@@ -99,9 +99,9 @@ fn expand_iri(value: &str, prefixes: &HashMap<String, IriBuf>) -> Result<IriBuf,
 				if let Some(base_iri) = prefixes.get(prefix) {
 					let concat = base_iri.as_str().to_string() + suffix;
 					if let Ok(iri) = IriBuf::new(concat.as_str()) {
-						return Ok(iri)
+						return Ok(iri);
 					} else {
-						return Err(())
+						return Err(());
 					}
 				}
 			}
@@ -126,32 +126,35 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 				let mut tokens = tokens.into_iter();
 				if let Some(token) = tokens.next() {
 					if let Ok(prefix) = string_literal_token(token) {
-						if let Some(_) = tokens.next() {
+						if tokens.next().is_some() {
 							if let Some(token) = tokens.next() {
 								if let Ok(iri) = string_literal_token(token) {
 									if let Ok(iri) = IriBuf::new(iri.as_str()) {
 										prefixes.insert(prefix, iri);
 									} else {
-										return error!("invalid IRI `{}` for prefix `{}`", iri, prefix)
+										return error!(
+											"invalid IRI `{}` for prefix `{}`",
+											iri, prefix
+										);
 									}
 								} else {
-									return error!("expected a string literal")
+									return error!("expected a string literal");
 								}
 							} else {
-								return error!("expected a string literal")
+								return error!("expected a string literal");
 							}
 						} else {
-							return error!("expected `=` literal")
+							return error!("expected `=` literal");
 						}
 					} else {
-						return error!("expected a string literal")
+						return error!("expected a string literal");
 					}
 				} else {
-					return error!("expected a string literal")
+					return error!("expected a string literal");
 				}
-			},
+			}
 			Ok(None) => (),
-			Err(tokens) => return tokens
+			Err(tokens) => return tokens,
 		}
 	}
 
@@ -167,22 +170,21 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 
 				for attr in variant.attrs {
 					match filter_attribute(attr, "iri") {
-						Ok(Some(tokens)) => {
-							match string_literal(tokens) {
-								Ok(str) => {
-									if let Ok(iri) = expand_iri(str.as_str(), &prefixes) {
-										variant_iri = Some(iri)
-									} else {
-										return error!("invalid IRI `{}` for variant `{}`", str, variant_ident)
-									}
-								},
-								Err(_) => {
-									return error!("malformed `iri` attribute")
+						Ok(Some(tokens)) => match string_literal(tokens) {
+							Ok(str) => {
+								if let Ok(iri) = expand_iri(str.as_str(), &prefixes) {
+									variant_iri = Some(iri)
+								} else {
+									return error!(
+										"invalid IRI `{}` for variant `{}`",
+										str, variant_ident
+									);
 								}
 							}
+							Err(_) => return error!("malformed `iri` attribute"),
 						},
 						Ok(None) => (),
-						Err(tokens) => return tokens
+						Err(tokens) => return tokens,
 					}
 				}
 
@@ -197,7 +199,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 						#type_id::#variant_ident => static_iref::iri!(#iri),
 					});
 				} else {
-					return error!("missing IRI for enum variant `{}`", variant_ident)
+					return error!("missing IRI for enum variant `{}`", variant_ident);
 				}
 			}
 
@@ -248,7 +250,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 			};
 
 			output.into()
-		},
+		}
 		_ => {
 			error!("only enums are handled by IriEnum")
 		}
@@ -259,7 +261,7 @@ fn string_literal(tokens: proc_macro2::TokenStream) -> Result<String, &'static s
 	if let Some(token) = tokens.into_iter().next() {
 		string_literal_token(token)
 	} else {
-		return Err("expected one string parameter");
+		Err("expected one string parameter")
 	}
 }
 
@@ -268,9 +270,9 @@ fn string_literal_token(token: proc_macro2::TokenTree) -> Result<String, &'stati
 		let str = lit.to_string();
 
 		if str.len() >= 2 {
-			let mut buffer = String::with_capacity(str.len()-2);
+			let mut buffer = String::with_capacity(str.len() - 2);
 			for (i, c) in str.chars().enumerate() {
-				if i == 0 || i == str.len()-1 {
+				if i == 0 || i == str.len() - 1 {
 					if c != '"' {
 						return Err("expected string literal");
 					}
@@ -281,9 +283,9 @@ fn string_literal_token(token: proc_macro2::TokenTree) -> Result<String, &'stati
 
 			Ok(buffer)
 		} else {
-			return Err("expected string literal");
+			Err("expected string literal")
 		}
 	} else {
-		return Err("expected string literal");
+		Err("expected string literal")
 	}
 }
