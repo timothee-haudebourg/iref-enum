@@ -1,43 +1,44 @@
-# IRI Enums
+# IRI Enums.
 
-<table><tr>
-	<td><a href="https://docs.rs/iref-enum">Documentation</a></td>
-	<td><a href="https://crates.io/crates/iref-enum">Crate informations</a></td>
-	<td><a href="https://github.com/timothee-haudebourg/iref-enum">Repository</a></td>
-</tr></table>
+[![CI](https://github.com/timothee-haudebourg/iref-enum/workflows/CI/badge.svg)](https://github.com/timothee-haudebourg/iref-enum/actions)
+[![Crate informations](https://img.shields.io/crates/v/iref-enum.svg?style=flat-square)](https://crates.io/crates/iref-enum)
+[![License](https://img.shields.io/crates/l/iref-enum.svg?style=flat-square)](https://github.com/timothee-haudebourg/iref-enum#license)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://docs.rs/iref-enum)
 
 This is a companion crate for `iref` providing a derive macro to declare
 enum types that converts into/from IRIs.
 
 Storage and comparison of IRIs can be costly. One may prefer the use of an enum
-type representing known IRIs with cheap convertion functions between the two.
+type representing known IRIs with cheap conversion functions between the two.
 This crate provides a way to declare such enums in an simple way through the
 use of a `IriEnum` derive macro.
 This macro will implement `TryFrom<Iri>` and `Into<Iri>` for you.
 
-## Basic usage
+### Basic usage
 
 Use `#[derive(IriEnum)]` attribute to generate the implementation of
 `TryFrom<Iri>` and `Into<Iri>` for the enum type.
 The IRI of each variant is defined with the `iri` attribute:
 ```rust
-#[macro_use]
-extern crate iref_enum;
-use std::convert::TryInto;
+use iref_enum::IriEnum;
 
 #[derive(IriEnum, PartialEq, Debug)]
 pub enum Vocab {
-	#[iri("http://xmlns.com/foaf/0.1/name")] Name,
-	#[iri("http://xmlns.com/foaf/0.1/knows")] Knows
+  #[iri("https://schema.org/name")] Name,
+  #[iri("https://schema.org/knows")] Knows
 }
 
 pub fn main() {
-	let term: Vocab = static_iref::iri!("http://xmlns.com/foaf/0.1/name").try_into().unwrap();
-	assert_eq!(term, Vocab::Name)
+  let term: Vocab = static_iref::iri!("https://schema.org/name").try_into().unwrap();
+  assert_eq!(term, Vocab::Name)
 }
 ```
 
-## Compact IRIs
+Each variant must have at most one parameter.
+If it has a parameter, its type must implement `TryFrom<Iri>` and
+`Into<Iri>`.
+
+### Compact IRIs
 
 The derive macro also support compact IRIs using the special `iri_prefix` attribute.
 First declare a prefix associated to a given `IRI`.
@@ -45,10 +46,10 @@ Then any `iri` attribute of the form `prefix:suffix` we be expanded into the con
 
 ```rust
 #[derive(IriEnum)]
-#[iri_prefix("foaf" = "http://xmlns.com/foaf/0.1/")]
+#[iri_prefix("schema" = "https://schema.org/")]
 pub enum Vocab {
-	#[iri("foaf:name")] Name,
-	#[iri("foaf:knows")] Knows
+  #[iri("schema:name")] Name,
+  #[iri("schema:knows")] Knows
 }
 ```
 

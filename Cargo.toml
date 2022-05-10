@@ -13,6 +13,7 @@ readme = "README.md"
 
 [lib]
 proc-macro = true
+path = "src/lib.rs"
 
 [dependencies]
 iref = "2.1"
