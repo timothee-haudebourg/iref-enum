@@ -21,10 +21,8 @@
 //!   #[iri("https://schema.org/knows")] Knows
 //! }
 //!
-//! pub fn main() {
-//!   let term: Vocab = static_iref::iri!("https://schema.org/name").try_into().unwrap();
-//!   assert_eq!(term, Vocab::Name)
-//! }
+//! let term: Vocab = static_iref::iri!("https://schema.org/name").try_into().unwrap();
+//! assert_eq!(term, Vocab::Name)
 //! ```
 //!
 //! Each variant must have at most one parameter.
