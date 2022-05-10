@@ -1,6 +1,6 @@
 [package]
 name = "iref-enum"
-version = "1.2.0"
+version = "2.0.0"
 authors = ["Timothée Haudebourg <author@haudebourg.net>"]
 edition = "2021"
 categories = ["web-programming", "internationalization"]
@@ -15,10 +15,10 @@ readme = "README.md"
 proc-macro = true
 
 [dependencies]
-iref = "^1.4"
-syn = "^1.0"
-proc-macro2 = "^1.0"
-quote = "^1.0"
+iref = "2.1"
+syn = "1.0"
+proc-macro2 = "1.0"
+quote = "1.0"
 
 [dev-dependencies]
-static-iref = "1.0"
+static-iref = "2.0"

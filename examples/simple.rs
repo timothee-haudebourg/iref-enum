@@ -10,8 +10,10 @@ use std::convert::TryInto;
 #[derive(IriEnum, PartialEq, Debug)]
 #[iri_prefix("foaf" = "http://xmlns.com/foaf/0.1/")]
 pub enum Vocab {
-	#[iri("foaf:name")] Name,
-	#[iri("foaf:knows")] Knows
+	#[iri("foaf:name")]
+	Name,
+	#[iri("foaf:knows")]
+	Knows,
 }
 
 pub fn main() {

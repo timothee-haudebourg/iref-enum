@@ -54,13 +54,11 @@
 //!   #[iri("foaf:knows")] Knows
 //! }
 //! ```
-extern crate proc_macro;
-
+use iref::IriBuf;
 use proc_macro::TokenStream;
 use proc_macro2::TokenTree;
 use quote::quote;
 use std::collections::HashMap;
-use iref::IriBuf;
 
 macro_rules! error {
 	( $( $x:expr ),* ) => {
@@ -72,13 +70,16 @@ macro_rules! error {
 	};
 }
 
-fn filter_attribute(attr: syn::Attribute, name: &str) -> Result<Option<proc_macro2::TokenStream>, TokenStream> {
+fn filter_attribute(
+	attr: syn::Attribute,
+	name: &str,
+) -> Result<Option<proc_macro2::TokenStream>, TokenStream> {
 	if let Some(attr_id) = attr.path.get_ident() {
 		if attr_id == name {
 			if let Some(TokenTree::Group(group)) = attr.tokens.into_iter().next() {
 				Ok(Some(group.stream()))
 			} else {
-				return Err(error!("malformed `{}` attribute", name))
+				return Err(error!("malformed `{}` attribute", name));
 			}
 		} else {
 			Ok(None)
@@ -98,9 +99,9 @@ fn expand_iri(value: &str, prefixes: &HashMap<String, IriBuf>) -> Result<IriBuf,
 				if let Some(base_iri) = prefixes.get(prefix) {
 					let concat = base_iri.as_str().to_string() + suffix;
 					if let Ok(iri) = IriBuf::new(concat.as_str()) {
-						return Ok(iri)
+						return Ok(iri);
 					} else {
-						return Err(())
+						return Err(());
 					}
 				}
 			}
@@ -131,26 +132,29 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 									if let Ok(iri) = IriBuf::new(iri.as_str()) {
 										prefixes.insert(prefix, iri);
 									} else {
-										return error!("invalid IRI `{}` for prefix `{}`", iri, prefix)
+										return error!(
+											"invalid IRI `{}` for prefix `{}`",
+											iri, prefix
+										);
 									}
 								} else {
-									return error!("expected a string literal")
+									return error!("expected a string literal");
 								}
 							} else {
-								return error!("expected a string literal")
+								return error!("expected a string literal");
 							}
 						} else {
-							return error!("expected `=` literal")
+							return error!("expected `=` literal");
 						}
 					} else {
-						return error!("expected a string literal")
+						return error!("expected a string literal");
 					}
 				} else {
-					return error!("expected a string literal")
+					return error!("expected a string literal");
 				}
-			},
+			}
 			Ok(None) => (),
-			Err(tokens) => return tokens
+			Err(tokens) => return tokens,
 		}
 	}
 
@@ -167,22 +171,21 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 
 				for attr in variant.attrs {
 					match filter_attribute(attr, "iri") {
-						Ok(Some(tokens)) => {
-							match string_literal(tokens) {
-								Ok(str) => {
-									if let Ok(iri) = expand_iri(str.as_str(), &prefixes) {
-										variant_iri = Some(iri)
-									} else {
-										return error!("invalid IRI `{}` for variant `{}`", str, variant_ident)
-									}
-								},
-								Err(_) => {
-									return error!("malformed `iri` attribute")
+						Ok(Some(tokens)) => match string_literal(tokens) {
+							Ok(str) => {
+								if let Ok(iri) = expand_iri(str.as_str(), &prefixes) {
+									variant_iri = Some(iri)
+								} else {
+									return error!(
+										"invalid IRI `{}` for variant `{}`",
+										str, variant_ident
+									);
 								}
 							}
+							Err(_) => return error!("malformed `iri` attribute"),
 						},
 						Ok(None) => (),
-						Err(tokens) => return tokens
+						Err(tokens) => return tokens,
 					}
 				}
 
@@ -190,16 +193,16 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 					syn::Fields::Unit => {
 						if let Some(iri) = variant_iri {
 							let iri = iri.as_str();
-		
+
 							try_from.extend(quote! {
 								_ if iri == static_iref::iri!(#iri) => Ok(#type_id::#variant_ident),
 							});
-		
+
 							into.extend(quote! {
 								#type_id::#variant_ident => static_iref::iri!(#iri),
 							});
 						} else {
-							return error!("missing IRI for enum variant `{}`", variant_ident)
+							return error!("missing IRI for enum variant `{}`", variant_ident);
 						}
 					}
 					syn::Fields::Named(_) => {
@@ -218,12 +221,14 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 									}
 								}
 							};
-		
+
 							into.extend(quote! {
 								#type_id::#variant_ident(v) => v.into(),
 							});
 						} else {
-							return error!("variants with named more than one field are unsupported")
+							return error!(
+								"variants with named more than one field are unsupported"
+							);
 						}
 					}
 				}
@@ -276,7 +281,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 			};
 
 			output.into()
-		},
+		}
 		_ => {
 			error!("only enums are handled by IriEnum")
 		}
@@ -296,9 +301,9 @@ fn string_literal_token(token: proc_macro2::TokenTree) -> Result<String, &'stati
 		let str = lit.to_string();
 
 		if str.len() >= 2 {
-			let mut buffer = String::with_capacity(str.len()-2);
+			let mut buffer = String::with_capacity(str.len() - 2);
 			for (i, c) in str.chars().enumerate() {
-				if i == 0 || i == str.len()-1 {
+				if i == 0 || i == str.len() - 1 {
 					if c != '"' {
 						return Err("expected string literal");
 					}
