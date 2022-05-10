@@ -2,7 +2,7 @@
 name = "iref-enum"
 version = "1.2.0"
 authors = ["Timothée Haudebourg <author@haudebourg.net>"]
-edition = "2018"
+edition = "2021"
 categories = ["web-programming", "internationalization"]
 keywords = ["iri", "iref", "macro", "derive", "enum"]
 description = "Derive macro for IRI-like enum types"

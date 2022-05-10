@@ -1,9 +1,9 @@
 //! # IRI Enums
 //!
 //! <table><tr>
-//! 	<td><a href="https://docs.rs/iref-enum">Documentation</a></td>
-//! 	<td><a href="https://crates.io/crates/iref-enum">Crate informations</a></td>
-//! 	<td><a href="https://github.com/timothee-haudebourg/iref-enum">Repository</a></td>
+//!   <td><a href="https://docs.rs/iref-enum">Documentation</a></td>
+//!   <td><a href="https://crates.io/crates/iref-enum">Crate informations</a></td>
+//!   <td><a href="https://github.com/timothee-haudebourg/iref-enum">Repository</a></td>
 //! </tr></table>
 //!
 //! This is a companion crate for `iref` providing a derive macro to declare
@@ -28,13 +28,13 @@
 //!
 //! #[derive(IriEnum, PartialEq, Debug)]
 //! pub enum Vocab {
-//! 	#[iri("http://xmlns.com/foaf/0.1/name")] Name,
-//! 	#[iri("http://xmlns.com/foaf/0.1/knows")] Knows
+//!   #[iri("http://xmlns.com/foaf/0.1/name")] Name,
+//!   #[iri("http://xmlns.com/foaf/0.1/knows")] Knows
 //! }
 //!
 //! pub fn main() {
-//! 	let term: Vocab = static_iref::iri!("http://xmlns.com/foaf/0.1/name").try_into().unwrap();
-//! 	assert_eq!(term, Vocab::Name)
+//!   let term: Vocab = static_iref::iri!("http://xmlns.com/foaf/0.1/name").try_into().unwrap();
+//!   assert_eq!(term, Vocab::Name)
 //! }
 //! ```
 //!
@@ -50,8 +50,8 @@
 //! #[derive(IriEnum)]
 //! #[iri_prefix("foaf" = "http://xmlns.com/foaf/0.1/")]
 //! pub enum Vocab {
-//! 	#[iri("foaf:name")] Name,
-//! 	#[iri("foaf:knows")] Knows
+//!   #[iri("foaf:name")] Name,
+//!   #[iri("foaf:knows")] Knows
 //! }
 //! ```
 extern crate proc_macro;
@@ -59,7 +59,6 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use proc_macro2::TokenTree;
 use quote::quote;
-use syn;
 use std::collections::HashMap;
 use iref::IriBuf;
 
@@ -126,7 +125,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 				let mut tokens = tokens.into_iter();
 				if let Some(token) = tokens.next() {
 					if let Ok(prefix) = string_literal_token(token) {
-						if let Some(_) = tokens.next() {
+						if tokens.next().is_some() {
 							if let Some(token) = tokens.next() {
 								if let Ok(iri) = string_literal_token(token) {
 									if let Ok(iri) = IriBuf::new(iri.as_str()) {
@@ -159,6 +158,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 		syn::Data::Enum(e) => {
 			let type_id = ast.ident;
 			let mut try_from = proc_macro2::TokenStream::new();
+			let mut try_from_default = quote! { Err(()) };
 			let mut into = proc_macro2::TokenStream::new();
 
 			for variant in e.variants {
@@ -186,18 +186,46 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 					}
 				}
 
-				if let Some(iri) = variant_iri {
-					let iri = iri.as_str();
+				match variant.fields {
+					syn::Fields::Unit => {
+						if let Some(iri) = variant_iri {
+							let iri = iri.as_str();
+		
+							try_from.extend(quote! {
+								_ if iri == static_iref::iri!(#iri) => Ok(#type_id::#variant_ident),
+							});
+		
+							into.extend(quote! {
+								#type_id::#variant_ident => static_iref::iri!(#iri),
+							});
+						} else {
+							return error!("missing IRI for enum variant `{}`", variant_ident)
+						}
+					}
+					syn::Fields::Named(_) => {
+						return error!("variants with named fields are unsupported")
+					}
+					syn::Fields::Unnamed(fields) => {
+						if fields.unnamed.len() == 1 {
+							let field = fields.unnamed.into_iter().next().unwrap();
+							let ty = field.ty;
 
-					try_from.extend(quote! {
-						_ if iri == static_iref::iri!(#iri) => Ok(#type_id::#variant_ident),
-					});
-
-					into.extend(quote! {
-						#type_id::#variant_ident => static_iref::iri!(#iri),
-					});
-				} else {
-					return error!("missing IRI for enum variant `{}`", variant_ident)
+							try_from_default = quote! {
+								match #ty::try_from(iri) {
+									Ok(value) => Ok(#type_id::#variant_ident(value)),
+									Err(_) => {
+										#try_from_default
+									}
+								}
+							};
+		
+							into.extend(quote! {
+								#type_id::#variant_ident(v) => v.into(),
+							});
+						} else {
+							return error!("variants with named more than one field are unsupported")
+						}
+					}
 				}
 			}
 
@@ -209,7 +237,7 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 					fn try_from(iri: ::iref::Iri) -> ::std::result::Result<#type_id, ()> {
 						match iri {
 							#try_from
-							_ => Err(())
+							_ => #try_from_default
 						}
 					}
 				}
@@ -259,7 +287,7 @@ fn string_literal(tokens: proc_macro2::TokenStream) -> Result<String, &'static s
 	if let Some(token) = tokens.into_iter().next() {
 		string_literal_token(token)
 	} else {
-		return Err("expected one string parameter");
+		Err("expected one string parameter")
 	}
 }
 
@@ -281,9 +309,9 @@ fn string_literal_token(token: proc_macro2::TokenTree) -> Result<String, &'stati
 
 			Ok(buffer)
 		} else {
-			return Err("expected string literal");
+			Err("expected string literal")
 		}
 	} else {
-		return Err("expected string literal");
+		Err("expected string literal")
 	}
 }
