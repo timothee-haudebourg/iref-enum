@@ -1,6 +1,6 @@
 [package]
 name = "iref-enum"
-version = "2.0.0"
+version = "2.1.0"
 authors = ["Timothée Haudebourg <author@haudebourg.net>"]
 edition = "2021"
 categories = ["web-programming", "internationalization"]
