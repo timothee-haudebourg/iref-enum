@@ -1,22 +1,16 @@
-#![feature(proc_macro_hygiene)]
-
-#[macro_use]
-extern crate iref_enum;
-#[macro_use]
-extern crate static_iref;
-
-use std::convert::TryInto;
+use iref_enum::IriEnum;
+use static_iref::iri;
 
 #[derive(IriEnum, PartialEq, Debug)]
-#[iri_prefix("foaf" = "http://xmlns.com/foaf/0.1/")]
+#[iri_prefix("schema" = "https://schema.org/")]
 pub enum Vocab {
-	#[iri("foaf:name")]
+	#[iri("schema:name")]
 	Name,
-	#[iri("foaf:knows")]
+	#[iri("schema:knows")]
 	Knows,
 }
 
 pub fn main() {
-	let term: Vocab = iri!("http://xmlns.com/foaf/0.1/name").try_into().unwrap();
+	let term: Vocab = iri!("https://schema.org/name").try_into().unwrap();
 	assert_eq!(term, Vocab::Name)
 }

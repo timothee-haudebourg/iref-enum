@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-
 use iref_enum::IriEnum;
 use static_iref::iri;
 
