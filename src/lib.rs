@@ -5,12 +5,12 @@
 //! type representing known IRIs with cheap conversion functions between the two.
 //! This crate provides a way to declare such enums in an simple way through the
 //! use of a `IriEnum` derive macro.
-//! This macro will implement `TryFrom<Iri>` and `Into<Iri>` for you.
+//! This macro will implement `TryFrom<&Iri>` and `AsRef<Iri>` for you.
 //!
 //! ## Basic usage
 //!
 //! Use `#[derive(IriEnum)]` attribute to generate the implementation of
-//! `TryFrom<Iri>` and `Into<Iri>` for the enum type.
+//! `TryFrom<&Iri>` and `AsRef<Iri>` for the enum type.
 //! The IRI of each variant is defined with the `iri` attribute:
 //! ```rust
 //! use iref_enum::IriEnum;
@@ -26,8 +26,8 @@
 //! ```
 //!
 //! Each variant must have at most one parameter.
-//! If it has a parameter, its type must implement `TryFrom<Iri>` and
-//! `Into<Iri>`.
+//! If it has a parameter, its type must implement `TryFrom<&Iri>` and
+//! `AsRef<Iri>`.
 //!
 //! ## Compact IRIs
 //!
@@ -69,7 +69,7 @@ fn filter_attribute(
 			if let Some(TokenTree::Group(group)) = attr.tokens.into_iter().next() {
 				Ok(Some(group.stream()))
 			} else {
-				return Err(error!("malformed `{}` attribute", name));
+				Err(error!("malformed `{}` attribute", name))
 			}
 		} else {
 			Ok(None)
@@ -88,7 +88,7 @@ fn expand_iri(value: &str, prefixes: &HashMap<String, IriBuf>) -> Result<IriBuf,
 			if !suffix.starts_with("//") {
 				if let Some(base_iri) = prefixes.get(prefix) {
 					let concat = base_iri.as_str().to_string() + suffix;
-					if let Ok(iri) = IriBuf::new(concat.as_str()) {
+					if let Ok(iri) = IriBuf::new(concat) {
 						return Ok(iri);
 					} else {
 						return Err(());
@@ -98,7 +98,7 @@ fn expand_iri(value: &str, prefixes: &HashMap<String, IriBuf>) -> Result<IriBuf,
 		}
 	}
 
-	if let Ok(iri) = IriBuf::new(value) {
+	if let Ok(iri) = IriBuf::new(value.to_owned()) {
 		Ok(iri)
 	} else {
 		Err(())
@@ -119,13 +119,16 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 						if tokens.next().is_some() {
 							if let Some(token) = tokens.next() {
 								if let Ok(iri) = string_literal_token(token) {
-									if let Ok(iri) = IriBuf::new(iri.as_str()) {
-										prefixes.insert(prefix, iri);
-									} else {
-										return error!(
-											"invalid IRI `{}` for prefix `{}`",
-											iri, prefix
-										);
+									match IriBuf::new(iri) {
+										Ok(iri) => {
+											prefixes.insert(prefix, iri);
+										}
+										Err(e) => {
+											return error!(
+												"invalid IRI `{}` for prefix `{}`",
+												e.0, prefix
+											);
+										}
 									}
 								} else {
 									return error!("expected a string literal");
@@ -225,11 +228,11 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 			}
 
 			let output = quote! {
-				impl ::std::convert::TryFrom<::iref::Iri<'_>> for #type_id {
+				impl<'a> ::std::convert::TryFrom<&'a ::iref::Iri> for #type_id {
 					type Error = ();
 
 					#[inline]
-					fn try_from(iri: ::iref::Iri) -> ::std::result::Result<#type_id, ()> {
+					fn try_from(iri: &'a ::iref::Iri) -> ::std::result::Result<#type_id, ()> {
 						match iri {
 							#try_from
 							_ => #try_from_default
@@ -237,35 +240,47 @@ pub fn iri_enum_derive(input: TokenStream) -> TokenStream {
 					}
 				}
 
-				impl<'a> From<&'a #type_id> for ::iref::Iri<'static> {
+				impl<'a, 'i> From<&'a #type_id> for &'i ::iref::Iri {
 					#[inline]
-					fn from(vocab: &'a #type_id) -> ::iref::Iri<'static> {
+					fn from(vocab: &'a #type_id) -> &'i ::iref::Iri {
 						match vocab {
 							#into
 						}
 					}
 				}
 
-				impl From<#type_id> for ::iref::Iri<'static> {
+				impl<'i> From<#type_id> for &'i ::iref::Iri {
 					#[inline]
-					fn from(vocab: #type_id) -> ::iref::Iri<'static> {
-						match vocab {
-							#into
-						}
+					fn from(vocab: #type_id) -> &'i ::iref::Iri {
+						<&::iref::Iri as From<&#type_id>>::from(&vocab)
 					}
 				}
 
-				impl iref::AsIri for #type_id {
+				impl<'a, 'i> From<&'a #type_id> for &'i ::iref::IriRef {
 					#[inline]
-					fn as_iri(&self) -> ::iref::Iri {
-						::iref::Iri::from(self)
+					fn from(vocab: &'a #type_id) -> &'i ::iref::IriRef {
+						<&::iref::Iri as From<&#type_id>>::from(vocab).as_iri_ref()
 					}
 				}
 
-				impl iref::AsIriRef for #type_id {
+				impl<'i> From<#type_id> for &'i ::iref::IriRef {
 					#[inline]
-					fn as_iri_ref(&self) -> ::iref::IriRef {
-						::iref::Iri::from(self).into()
+					fn from(vocab: #type_id) -> &'i ::iref::IriRef {
+						<&::iref::Iri as From<#type_id>>::from(vocab).as_iri_ref()
+					}
+				}
+
+				impl AsRef<iref::Iri> for #type_id {
+					#[inline]
+					fn as_ref(&self) -> &::iref::Iri {
+						<&::iref::Iri as From<&#type_id>>::from(self)
+					}
+				}
+
+				impl AsRef<iref::IriRef> for #type_id {
+					#[inline]
+					fn as_ref(&self) -> &::iref::IriRef {
+						<&::iref::IriRef as From<&#type_id>>::from(self)
 					}
 				}
 			};

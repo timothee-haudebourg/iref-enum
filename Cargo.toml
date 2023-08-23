@@ -1,6 +1,6 @@
 [package]
 name = "iref-enum"
-version = "2.1.0"
+version = "3.0.0"
 authors = ["Timothée Haudebourg <author@haudebourg.net>"]
 edition = "2021"
 categories = ["web-programming", "internationalization"]
@@ -16,10 +16,10 @@ proc-macro = true
 path = "src/lib.rs"
 
 [dependencies]
-iref = "2.1"
+iref = "3.0"
 syn = "1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
 
 [dev-dependencies]
-static-iref = "2.0"
+static-iref = "3.0"
